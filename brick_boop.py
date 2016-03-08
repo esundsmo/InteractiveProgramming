@@ -1,4 +1,5 @@
 import pygame
+import pygame.mixer
 from pygame.locals import QUIT, KEYDOWN, KEYUP, MOUSEMOTION
 import time
 from random import choice
@@ -46,7 +47,7 @@ class Player_View(object):
 ################## BECCA TRYING TO MAKE TEXT STUFF WORK
         #set font sizes
         font_size_small= 20
-        font_size_big= 40
+        font_size_big= 30
 
         #update score counter
         score_counter = pygame.font.SysFont("monospace", font_size_small)
@@ -56,14 +57,16 @@ class Player_View(object):
         #say rank
         player_rank= pygame.font.SysFont("monospace", font_size_big)
         rank_str= player_rank.render(str(self.model.rank), 1, pygame.Color('white'))
-        self.screen.blit(rank_str, (self.model.MARGIN+5, self.model.height-2*self.model.MARGIN-self.model.BALL_RADIUS*2- font_size_small+font_size_big))
+        # self.screen.blit(rank_str, (self.model.MARGIN+5, self.model.height-2*self.model.MARGIN-self.model.BALL_RADIUS*2- font_size_small+font_size_big))
+        self.screen.blit(rank_str, (self.model.MARGIN+5, 360))
 
         #say when game is over
         game_status= pygame.font.SysFont("monospace", font_size_big)
-        status_str= game_status.render(str(self.model.status), 1, pygame.Color('white'))
-        self.screen.blit(status_str, (self.model.MARGIN+5, self.model.height-3*self.model.MARGIN-self.model.BALL_RADIUS*2- font_size_small+ 2*font_size_big))
+        status_str= game_status.render("{}".format(self.model.status), 1, pygame.Color('white'))
+        # self.screen.blit(status_str, (self.model.MARGIN+5, self.model.height-3*self.model.MARGIN-self.model.BALL_RADIUS*2- font_size_small+ 2*font_size_big))
+        self.screen.blit(status_str, (self.model.MARGIN+5, 300))
         
-        
+        # "{}".format(self.model.status)
 
 
         # myfont = pygame.font.SysFont("monospace", 60)
@@ -97,7 +100,7 @@ class Paddle(object):
         self.left_side_x= left_side_x
         self.top_side_y= top_side_y
         self.width= 180
-        self.height= 20
+        self.height= 9
 
 class Ball(object):
     """represents the ball, which moves wrt time"""
@@ -127,6 +130,8 @@ class Classic_Model(object):
         self.height= height
         #starting score count at 0
         self.score= 0
+        self.win_flag = 0
+
         #sets status and rank to be blank.  will update when ball stops moving
         self.rank= ""
         self.status= ""
@@ -136,7 +141,7 @@ class Classic_Model(object):
         self.BRICK_WIDTH= 40
         self.BRICK_HEIGHT= 20
         self.MARGIN= 5
-        self.IMPEDING_LINE_OF_DOOM= height/2
+        self.IMPEDING_LINE_OF_DOOM= height/3
         self.BALL_RADIUS= 10
         #creates the walls [left, ceiling, right, floor]
         self.wall= [Wall(0,0,self.MARGIN,height), Wall(self.MARGIN,0, 
@@ -168,20 +173,24 @@ class Classic_Model(object):
         #for ball colliding with walls
         #left side
         if self.ball.left_side_x<= self.MARGIN:
+            wall_sound.play()
             self.ball.left_side_x = self.MARGIN+1
             self.ball.velocity_x= -self.ball.velocity_x
         #right side    
         if self.ball.left_side_x>= self.width-self.MARGIN-self.ball.width:
+            wall_sound.play()
             self.ball.left_side_x = self.width-self.MARGIN-self.ball.width-1
             self.ball.velocity_x= -self.ball.velocity_x
         #top
         if self.ball.top_side_y<= self.MARGIN:
+            wall_sound.play()
             self.ball.top_side_y = self.MARGIN+1
             self.ball.velocity_y= -self.ball.velocity_y
         #bottom
         #for now, for debugging purposes, the bottom is sending the ball straight up.
         #eventually this will need to stop ball movement and end the game.
         if self.ball.top_side_y>= self.height-self.MARGIN-self.ball.height:
+            end_sound.play()
             self.ball.top_side_y = self.height-self.MARGIN-self.ball.height-1
             self.ball.velocity_x=0
             self.ball.velocity_y=0
@@ -191,66 +200,67 @@ class Classic_Model(object):
         #paddle rect., the ball will bounce off and an angle.  The angle depends on
         #which of the 6 "segments" of the paddle that it hits.
         if ball_r.colliderect(paddle_r):
+            paddle_sound.play()
             #segment 1
             if self.paddle.left_side_x<= self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ (1/6.0)*self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(30.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= -(new_vel_x)
                 self.ball.velocity_y= -(new_vel_y)
-                print "segment 1"  ,self.ball.velocity_x, self.ball.velocity_y     
+                # print "segment 1"  ,self.ball.velocity_x, self.ball.velocity_y     
             #segment 2
             elif self.paddle.left_side_x+ (1/6.0)*self.paddle.width< self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ (2/6.0)*self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(45.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= -(new_vel_x)
                 self.ball.velocity_y= -(new_vel_y) 
-                print "segment 2"    ,self.ball.velocity_x, self.ball.velocity_y         
+                # print "segment 2"    ,self.ball.velocity_x, self.ball.velocity_y         
             #segment 3
             elif self.paddle.left_side_x+ (2/6.0)*self.paddle.width< self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ (3/6.0)*self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(60.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= -(new_vel_x)
                 self.ball.velocity_y= -(new_vel_y)      
-                print "segment 3"  ,self.ball.velocity_x, self.ball.velocity_y    
+                # print "segment 3"  ,self.ball.velocity_x, self.ball.velocity_y    
             #segment 4
             elif self.paddle.left_side_x+ (3/6.0)*self.paddle.width< self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ (4/6.0)*self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(60.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= (new_vel_x)
                 self.ball.velocity_y= -(new_vel_y) 
-                print "segment 4"  ,self.ball.velocity_x, self.ball.velocity_y         
+                # print "segment 4"  ,self.ball.velocity_x, self.ball.velocity_y         
             #segment 5
             elif self.paddle.left_side_x+ (4/6.0)*self.paddle.width< self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ (5/6.0)*self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(45.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= (new_vel_x)
                 self.ball.velocity_y= -(new_vel_y)  
-                print "segment 5"  ,self.ball.velocity_x, self.ball.velocity_y        
+                # print "segment 5"  ,self.ball.velocity_x, self.ball.velocity_y        
             #segment 6
             elif self.paddle.left_side_x+ (5/6.0)*self.paddle.width< self.ball.left_side_x+.5*self.ball.width<= self.paddle.left_side_x+ self.paddle.width:
-                print self.ball.velocity_x, self.ball.velocity_y
+                # print self.ball.velocity_x, self.ball.velocity_y
                 self.ball.top_side_y= self.ball.top_side_y-1
                 theta=(30.0)*(math.pi/180)
                 new_vel_x= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.sin(theta)
                 new_vel_y= math.sqrt(self.ball.velocity_y**2 + self.ball.velocity_x**2)*math.cos(theta)
                 self.ball.velocity_x= (new_vel_x)
                 self.ball.velocity_y= -(new_vel_y)
-                print "segment 6" ,self.ball.velocity_x, self.ball.velocity_y
+                # print "segment 6" ,self.ball.velocity_x, self.ball.velocity_y
         
         #for "destroying the bricks in the ball's path. checks for collision with 
         #each brick rect. object.  if they have collided, the ball's velocity will
@@ -259,6 +269,7 @@ class Classic_Model(object):
             brick_r= pygame.Rect(brick.left_side_x, brick.top_side_y,
                                 brick.width, brick.height)
             if ball_r.colliderect(brick_r):
+                brick_sound.play()
                 #increase score for each brick hit
                 self.score+=1
                 #makes ball bounce off of brick
@@ -274,13 +285,21 @@ class Classic_Model(object):
                 #for vertical collisions
                 if brick_left<= ball_x<= brick_right:
                         self.ball.velocity_y= -self.ball.velocity_y
-                        print "vertical"
                 elif brick_top<= ball_y<= brick_bottom:
                         self.ball.velocity_x= -self.ball.velocity_x     
-                        print "horizontal"
                 #move broken brick off screen        
                 brick.left_side_x=0-self.BRICK_WIDTH
                 brick.top_side_y= 0-self.BRICK_HEIGHT
+
+        # #logic for increasing ball velocity based on score
+        # checkpoint = False
+        # if self.score>0 and self.score%20==0:
+        #     checkpoint = True
+        # if checkpoint:
+        #     self.ball.velocity_x= (self.ball.velocity_x)*1.5
+        #     self.ball.velocity_y= (self.ball.velocity_y)*1.5
+        #     checkpoint = False
+        #     print self.ball.velocity_x, self.ball.velocity_y
 
         #for the movement of the ball
         self.ball.update()
@@ -296,38 +315,50 @@ class Classic_Model(object):
             self.paddle.left_side_x = self.width-self.MARGIN-self.paddle.width-1
 
 #####################################################
-# #logic for increasing ball velocity based on score
-# if score %20==0:
-#     self.ball.velocity_x= (self.ball.velocity_x)*1.2
-#     self.ball.velocity_y= (self.ball.velocity_y)*1.2
+
+        
+
+
+
+
+
+
 
 ##########################################################
 #figure out where to place updating rank (when hits bottom?)
 #need to figure out how to stop ball and update rank when all balls are eliminated and ball bever touches bottom
 
-        # #if all bricks are hit
-        # score_percentage= (self.score/len(self.brick))*100
-        # if score_percentage==100:
-        #     self.ball.velocity_x=0
-        #     self.ball.velocity_y=0
-        # #checks if ball is in play, updates status and sets rank
-        # if self.ball.velocity_x==0 and self.ball.velocity_y==0:
-        #     self.status= "GAME OVER"
-        #     if self.score== 0:
-        #         self.rank= "RANK: NEWTON'S APPLE"
-        #     elif 0<score_percentage<=20:
-        #         print "hit 0-20%"
-        #         self.rank= "RANK: TWO YEAR OLD TERROR"
-        #     elif 20<score_percentage<=40:
-        #         self.rank= "RANK: KRONK"             
-        #     elif 40<score_percentage<=60:
-        #         self.rank= "RANK: MILEY'S WRECKING BALL"
-        #     elif 60<score_percentage<=80:
-        #         self.rank= "RANK: HULK"
-        #     elif 80<score_percentage<100:
-        #         self.rank= "RANK: JACK-JACK"
-        #     elif score_percentage== 100:
-        #         self.rank="RANK: YE OLDE SMASHER OF BRICKS"    
+        #if all bricks are hit
+        score_percentage= (float(self.score)/float(len(self.brick)))*100.0
+        # print len(self.brick)
+        # print score_percentage
+
+        if score_percentage==100:
+            self.win_flag+=1
+            if self.win_flag==1:
+                win_sound.play()
+                
+
+            self.ball.velocity_x=0
+            self.ball.velocity_y=0
+        #checks if ball is in play, updates status and sets rank
+        if self.ball.velocity_x==0 and self.ball.velocity_y==0:
+            self.status= "GAME OVER"
+            if self.score== 0:
+                self.rank= "RANK: NEWTON'S APPLE"
+            elif 0<score_percentage<=20:
+                # print "hit 0-20%"
+                self.rank= "RANK: TWO YEAR OLD TERROR"
+            elif 20<score_percentage<=40:
+                self.rank= "RANK: KRONK"             
+            elif 40<score_percentage<=60:
+                self.rank= "RANK: MILEY'S WRECKING BALL"
+            elif 60<score_percentage<=80:
+                self.rank= "RANK: HULK"
+            elif 80<score_percentage<100:
+                self.rank= "RANK: JACK-JACK"
+            elif score_percentage== 100:
+                self.rank="RANK: YE OLDE SMASHER OF BRICKS"    
 #################################################
 
 # class Magic_Balls(object):
@@ -368,9 +399,26 @@ class Controller(object):
 
 if __name__=='__main__':
     """NEEDS WORK"""
-    pygame.init()
-    size= (640,480)
+    # setup mixer to avoid sound lag
+    pygame.mixer.pre_init(frequency=22050, size=-16, channels=2, buffer=4096)
 
+    #44100, -16, 2, 2048
+
+    pygame.init()
+    size= (800, 600)
+    # size= (640,480) 
+
+    try:
+        wall_sound = pygame.mixer.Sound("Blop.wav")  #load sound
+        paddle_sound = pygame.mixer.Sound("Blop.wav")  #load sound
+        brick_sound = pygame.mixer.Sound("Pop_Cork.wav")  #load sound
+        end_sound = pygame.mixer.Sound("Sad_Trombone.wav")  #load sound
+        win_sound = pygame.mixer.Sound("TaDa.wav")  #load sound
+
+        # blop = pygame.mixer.Sound("Jump.wav")  #load sound
+    except:
+        raise UserWarning, "could not load or play soundfiles in specified folder. Check naming convention and folder location!"
+ 
     model= Classic_Model(size[0], size[1])
     view= Player_View(model, size)
     controller= Controller(model)
@@ -379,7 +427,8 @@ if __name__=='__main__':
     while running:
         for event in pygame.event.get():
             if event.type== QUIT:
-                running= False
+                # quit_sound.play()  #doesn't work here
+                running= False 
             else:
                 controller.handle_event(event)
         model.update()
